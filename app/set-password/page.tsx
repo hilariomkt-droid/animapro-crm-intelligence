@@ -1,0 +1,1 @@
+import PasswordForm from './ui';export default function Page(){return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:20}}><div className="card" style={{width:'100%',maxWidth:420}}><h1>Definir senha · AnimaPro</h1><p className="muted">Crie uma senha segura para acessar o CRM.</p><PasswordForm/></div></main>}

@@ -1,0 +1,1 @@
+import './globals.css';export const metadata={title:'AnimaPro CRM Intelligence',description:'Gestão inteligente de clientes e vendas'};export default function Root({children}:{children:React.ReactNode}){return <html lang="pt-BR"><body>{children}</body></html>}

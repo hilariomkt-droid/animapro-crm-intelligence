@@ -1,0 +1,5 @@
+import type { CookieOptions } from '@supabase/ssr';
+import { NextResponse,type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+export async function middleware(req:NextRequest){let res=NextResponse.next({request:req});const db=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{cookies:{getAll(){return req.cookies.getAll()},setAll(items: {name:string;value:string;options:CookieOptions}[]){items.forEach(({name,value})=>req.cookies.set(name,value));res=NextResponse.next({request:req});items.forEach(({name,value,options})=>res.cookies.set(name,value,options))}}});const {data:{user}}=await db.auth.getUser();if(!user && !req.nextUrl.pathname.startsWith('/login') && !req.nextUrl.pathname.startsWith('/auth'))return NextResponse.redirect(new URL('/login',req.url));return res}
+export const config={matcher:['/dashboard/:path*','/clients/:path*','/pipeline/:path*','/team/:path*']};

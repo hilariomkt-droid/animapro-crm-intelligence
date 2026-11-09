@@ -1,0 +1,1 @@
+import LoginForm from './ui';export default function Login(){return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:20}}><div className="card" style={{maxWidth:420,width:'100%'}}><h1>Anima<span style={{color:'#7436cf'}}>Pro</span></h1><p className="muted">CRM Intelligence · Acesso exclusivo da equipe</p><LoginForm/></div></main>}
