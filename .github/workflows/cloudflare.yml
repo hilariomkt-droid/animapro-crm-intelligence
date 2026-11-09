@@ -24,9 +24,8 @@ jobs:
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SERVICE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          for key in TOKEN ACCOUNT NEXT_PUBLIC_SUPABASE_ANON_KEY SERVICE; do
+          for key in TOKEN ACCOUNT NEXT_PUBLIC_SUPABASE_ANON_KEY; do
             if [[ -z "${!key}" ]]; then echo "::error::Configuração ausente: $key"; exit 1; fi
           done
       - run: npm ci
@@ -38,6 +37,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          if [[ -z "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
+            npx wrangler deploy --keep-vars
+            exit $?
+          fi
           umask 077
           path=$(mktemp)
           trap 'rm -f "$path"' EXIT
