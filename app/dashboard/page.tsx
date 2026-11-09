@@ -10,7 +10,7 @@ export default async function Dashboard(){
     db.from('clients').select('id',{count:'exact',head:true}).eq('organization_id',org),
     db.from('deals').select('amount,stage').eq('organization_id',org),
     db.from('deals').select('id',{count:'exact',head:true}).eq('organization_id',org).eq('stage','won'),
-    db.from('clients').select('id',{count:'exact',head:true}).eq('organization_id',org).lte('last_video_on',cutoff)
+    db.from('campaign_roster').select('id',{count:'exact',head:true}).eq('organization_id',org).lte('last_video_on',cutoff)
   ]);
   const open=(deals.data||[]).filter(x=>!['won','lost'].includes(x.stage));
   const money=(n:number)=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});

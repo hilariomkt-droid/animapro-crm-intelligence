@@ -44,7 +44,7 @@ export default function Campaigns({org,canEdit}:{org:string;canEdit:boolean}){
   useEffect(()=>{
     let active=true;
     async function load(){
-      let query=browserDb().from('clients').select('id,name,phone,segment,last_video_on').eq('organization_id',org);
+      let query=browserDb().from('campaign_roster').select('id,name,phone,segment,last_video_on').eq('organization_id',org);
       if(search.trim()) query=query.ilike('name','%'+search.trim()+'%');
       if(due) query=query.lte('last_video_on',cutoff);
       const {data,error}=await query.order('name').order('id').range(page*50,page*50+50);
@@ -79,7 +79,7 @@ export default function Campaigns({org,canEdit}:{org:string;canEdit:boolean}){
     setSaving(true);
     try{
       const db=browserDb();
-      const result=kind==='video'?await db.from('clients').update({last_video_on:video}).eq('id',client.id).eq('organization_id',org).select('id').single():
+      const result=kind==='video'?await db.from('campaign_videos').insert({organization_id:org,client_id:client.id,video_on:video}).select('id').single():
         await db.from('campaign_contacts').insert({client_id:client.id,organization_id:org,campaign,outcome}).select('id').single();
       setNotice(result.error?result.error.message:'Registro salvo.');if(!result.error)reload(n=>n+1);
     }finally{setSaving(false);}
