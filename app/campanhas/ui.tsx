@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {browserDb} from '@/lib/supabase';
 import modelos from './modelos.json';
 import {briefing} from './briefing';
@@ -21,6 +21,21 @@ export default function Campaigns({org,canEdit}:{org:string;canEdit:boolean}){
   const [consent,setConsent]=useState(false),[video,setVideo]=useState(''),[refresh,reload]=useState(0);
   const [history,setHistory]=useState<Activity[]>([]),[outcome,setOutcome]=useState(states[0]),[saving,setSaving]=useState(false);
   const [photo,setPhoto]=useState<File|null>(null);
+  const ideaBox=useRef<HTMLTextAreaElement>(null);
+  const [totals,setTotals]=useState<number[]|null>(null);
+  useEffect(()=>{
+    let active=true;
+    setTotals(null);
+    async function loadTotals(){
+      const results=await Promise.all(states.map(state=>browserDb().from('campaign_contacts')
+        .select('id',{count:'exact',head:true}).eq('organization_id',org).eq('campaign',campaign).eq('outcome',state)));
+      if(!active) return;
+      if(results.some(result=>result.error)) setNotice('Não foi possível carregar os resultados da campanha.');
+      else setTotals(results.map(result=>result.count??0));
+    }
+    void loadTotals();
+    return ()=>{active=false;};
+  },[campaign,org,refresh]);
   const client=clients.find(x=>x.id===selected);
   const text=draft.replaceAll('{empresa}',client?.name || '{empresa}');
   const phone=whatsapp(client?.phone||null);
@@ -85,7 +100,12 @@ export default function Campaigns({org,canEdit}:{org:string;canEdit:boolean}){
     <section className="card stack"><h2>Planejar campanha</h2><label>Campanha<select disabled={busy} value={campaign} onChange={e=>{setCampaign(e.target.value);setDraft(templates[e.target.value]);setIdea('')}}>{Object.keys(templates).map(c=><option key={c}>{c}</option>)}</select></label>
       <button className="btn" disabled={busy} onClick={generate}>{busy?'Gerando sugestões…':'Sugerir temas e conversas com IA'}</button>
       <div className="row" style={{flexWrap:'wrap'}}><button className="btn secondary" onClick={copy}>Copiar briefing</button><a className="btn secondary" href="https://chatgpt.com/" target="_blank" rel="noreferrer">Abrir meu ChatGPT</a></div>
-      {idea&&<label>Sugestões<textarea className="input" rows={8} readOnly value={idea}/></label>}
+      {idea&&<><label>Sugestões<textarea ref={ideaBox} className="input" rows={8} readOnly value={idea}/></label>
+      <button className="btn secondary" onClick={()=>{
+        const box=ideaBox.current;
+        if(!box || box.selectionStart===box.selectionEnd){setNotice('Selecione a abertura ou pergunta nas sugestões.');return;}
+        setDraft(idea.slice(box.selectionStart,box.selectionEnd));setNotice('Trecho aplicado à mensagem.');
+      }}>Usar trecho selecionado na mensagem</button></>}
     </section>
     <section className="card stack"><h2>Disparador AnimaPro</h2><label>Mensagem da campanha<textarea className="input" rows={6} value={draft} onChange={e=>setDraft(e.target.value)}/></label>
       {client&&<p style={{whiteSpace:'pre-wrap'}}>{text}</p>}
@@ -96,6 +116,8 @@ export default function Campaigns({org,canEdit}:{org:string;canEdit:boolean}){
       {photo&&<button className="btn secondary" disabled={!consent||!client||!canEdit} onClick={share}>Compartilhar imagem e mensagem</button>}
       <label>Resultado do contato<select value={outcome} onChange={e=>setOutcome(e.target.value)}>{states.map(s=><option key={s}>{s}</option>)}</select></label>
       <button className="btn" disabled={!client||!canEdit||saving} onClick={()=>record('outcome')}>Registrar resultado</button>
+      <h3>Resultados da campanha · {campaign}</h3>
+      {totals&&<div className="grid">{states.map((state,index)=><div key={state}><strong>{totals[index]}</strong> {state}</div>)}</div>}
       <h3>Histórico do cliente</h3>{history.length?history.map(h=><div key={h.id}>{new Date(h.created_at).toLocaleDateString('pt-BR')} · {h.campaign} · {h.outcome}</div>):<p>Nenhum contato registrado.</p>}
     </section>{notice&&<p role="status" style={{position:'sticky',bottom:0,background:'white',padding:12}}>{notice}</p>}
   </div>;

@@ -1,1 +1,24 @@
-import Shell from '@/components/Shell';import {identity} from '@/lib/server';import {redirect} from 'next/navigation';export default async function Dashboard(){const {db,user,org}=await identity();if(!user)redirect('/login');if(!org)return <Shell title="Aguardando acesso"><div className="card">Sua conta ainda não está vinculada a uma organização. Peça ao administrador para enviar um convite.</div></Shell>;const [{count:clients},{data:deals},{count:won}]=await Promise.all([db.from('clients').select('*',{count:'exact',head:true}).eq('organization_id',org),db.from('deals').select('amount,stage').eq('organization_id',org),db.from('deals').select('*',{count:'exact',head:true}).eq('organization_id',org).eq('stage','won')]);const open=(deals||[]).filter(x=>!['won','lost'].includes(x.stage));const money=(n:number)=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});return <Shell title="Dashboard"><div className="grid">{[['Clientes cadastrados',clients||0],['Negociações abertas',open.length],['Valor em negociação',money(open.reduce((a,x)=>a+Number(x.amount||0),0))],['Vendas concluídas',won||0]].map(([label,value])=><div className="card" key={label}><div className="muted">{label}</div><div className="big">{value}</div></div>)}</div><div className="card" style={{marginTop:22}}><h2>Bem-vindo ao AnimaPro Intelligence</h2><p className="muted">Comece cadastrando seus clientes, importando uma lista CSV ou criando negociações no funil comercial. Consulte os retornos, prepare campanhas e acompanhe as respostas.</p><a className="btn secondary" href="/campanhas">Abrir campanhas e retornos</a></div></Shell>}
+import Shell from '@/components/Shell';
+import {identity} from '@/lib/server';
+import {redirect} from 'next/navigation';
+export default async function Dashboard(){
+  const {db,user,org}=await identity();
+  if(!user) redirect('/login');
+  if(!org) return <Shell title="Aguardando acesso"><div className="card">Sua conta ainda não está vinculada a uma organização.</div></Shell>;
+  const cutoff=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const [clients,deals,won,returns]=await Promise.all([
+    db.from('clients').select('id',{count:'exact',head:true}).eq('organization_id',org),
+    db.from('deals').select('amount,stage').eq('organization_id',org),
+    db.from('deals').select('id',{count:'exact',head:true}).eq('organization_id',org).eq('stage','won'),
+    db.from('clients').select('id',{count:'exact',head:true}).eq('organization_id',org).lte('last_video_on',cutoff)
+  ]);
+  const open=(deals.data||[]).filter(x=>!['won','lost'].includes(x.stage));
+  const money=(n:number)=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  return <Shell title="Dashboard"><div className="grid">
+    {[['Clientes cadastrados',clients.count??'—'],['Negociações abertas',deals.error?'—':open.length],
+      ['Valor em negociação',deals.error?'—':money(open.reduce((sum,deal)=>sum+Number(deal.amount||0),0))],
+      ['Vendas concluídas',won.count??'—']].map(([label,value])=><div className="card" key={label}><div className="muted">{label}</div><div className="big">{value}</div></div>)}
+    </div><section className="card" style={{marginTop:22}}><h2>Retorno de clientes</h2>
+    <p>{returns.error?'Não foi possível consultar os retornos.':`${returns.count??0} cliente(s) com último vídeo registrado há pelo menos 30 dias.`}</p>
+    <a className="btn secondary" href="/campanhas">Abrir campanhas e retornos</a></section></Shell>;
+}
