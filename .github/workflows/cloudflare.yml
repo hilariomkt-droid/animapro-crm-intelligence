@@ -1,0 +1,45 @@
+name: Publicar AnimaPro no Cloudflare
+on:
+  push:
+    branches: [release/v0.1]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: animapro-worker
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://mpxynhvudrrryxskvvzr.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Validar configuração
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SERVICE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          for key in TOKEN ACCOUNT NEXT_PUBLIC_SUPABASE_ANON_KEY SERVICE; do
+            if [[ -z "${!key}" ]]; then echo "::error::Configuração ausente: $key"; exit 1; fi
+          done
+      - run: npm ci
+      - run: npm run build:worker
+      - run: npx wrangler deploy --dry-run
+      - name: Publicar Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          umask 077
+          path=$(mktemp)
+          trap 'rm -f "$path"' EXIT
+          node -e 'require("fs").writeFileSync(process.argv[1],JSON.stringify({SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY}))' "$path"
+          npx wrangler deploy --secrets-file "$path"
