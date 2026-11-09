@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://mpxynhvudrrryxskvvzr.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_qrPxa-8GxApUlPPvP3dlMQ_BbIJ-HAb' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
